@@ -19,7 +19,7 @@ import {
   isSameMonth,
 } from "../utils";
 import { saturday, sunday, workDays } from "../libs";
-const CalendarComponent = ({ chidren }) => {
+const CalendarComponent = () => {
   const [dateViewed, setDateViewed] = useState(new Date());
   const [dateSelected, setDateSelected] = useState(null);
   const fistDate = getPrevSun(getFirstDate(dateViewed));
@@ -54,7 +54,7 @@ const CalendarComponent = ({ chidren }) => {
           <Text style={styles.sun}>{sunday[0]}</Text>
         </View>
         {workDays.map((day) => (
-          <View style={styles.day}>
+          <View key={day} style={styles.day}>
             <Text>{day}</Text>
           </View>
         ))}
@@ -87,11 +87,15 @@ const CalendarComponent = ({ chidren }) => {
                     : styles.null
                 }
               >
-                {isSameMonth(item, dateViewed) ? (
-                  <Text style={styles.dateInMonth}>{item.getDate()}</Text>
-                ) : (
-                  <Text style={styles.dateOutMonth}>{item.getDate()}</Text>
-                )}
+                <Text
+                  style={
+                    isSameMonth(item, dateViewed)
+                      ? styles.dateInMonth
+                      : styles.dateOutMonth
+                  }
+                >
+                  {item.getDate()}
+                </Text>
               </View>
             </TouchableOpacity>
           )}
