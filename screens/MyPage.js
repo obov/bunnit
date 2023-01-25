@@ -2,13 +2,8 @@ import React from "react";
 import { View, Text } from "react-native";
 
 const MyPage = () => (
-  <Screen>
+  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
     <Text>My Page</Text>
-  </Screen>
+  </View>
 );
 export default MyPage;
-const Screen = styled.View`
-  flex: 1;
-  justify-content: "center";
-  align-items: "center";
-`;
