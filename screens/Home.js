@@ -33,19 +33,25 @@ const Home = () => {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: position.value }],
   }));
-
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.box, animatedStyle]} />
-    </GestureDetector>
+    <View style={styles.container}>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.box, animatedStyle]} />
+      </GestureDetector>
+    </View>
   );
 };
 
 export default Home;
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   box: {
     width: 300,
     height: 300,
-    borderLeftColor: "red",
+    backgroundColor: "red",
   },
 });

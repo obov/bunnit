@@ -6,7 +6,7 @@ import {
   FlatList,
 } from "react-native";
 import { Dimensions } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
   changeMonth,
@@ -19,20 +19,118 @@ import {
   isSameMonth,
 } from "../utils";
 import { saturday, sunday, workDays } from "../libs";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+  withDelay,
+} from "react-native-reanimated";
+
+const CalendarBody = ({ dateSelected, setDateSelected, dateViewed }) => {
+  const handlePressDate = (date) => () => {
+    setDateSelected(date);
+  };
+  const fistDate = getPrevSun(getFirstDate(dateViewed));
+  const lastDate = getNextSatur(getLastDate(dateViewed));
+  return (
+    <FlatList
+      keyExtractor={(item) => item.getTime()}
+      scrollEnabled={false}
+      data={getDaysRange(fistDate, lastDate)}
+      style={styles.body}
+      ItemSeparatorComponent={() => <View style={{ height: 10, width: 10 }} />}
+      columnWrapperStyle={{
+        justifyContent: "space-between",
+      }}
+      renderItem={({ item }) => (
+        <TouchableOpacity style={styles.date} onPress={handlePressDate(item)}>
+          <View
+            style={
+              dateSelected
+                ? isSameDate(item, dateSelected)
+                  ? styles.selected
+                  : styles.null
+                : styles.null
+            }
+          >
+            <Text
+              style={
+                isSameMonth(item, dateViewed)
+                  ? styles.dateInMonth
+                  : styles.dateOutMonth
+              }
+            >
+              {item.getDate()}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      numColumns={7}
+    />
+  );
+};
 const CalendarComponent = () => {
   const [dateViewed, setDateViewed] = useState(new Date());
   const [dateSelected, setDateSelected] = useState(null);
-  const fistDate = getPrevSun(getFirstDate(dateViewed));
-  const lastDate = getNextSatur(getLastDate(dateViewed));
+  const dateViewedChangeMonth = changeMonth(dateViewed);
+  const changeMonthOnJS = (val) => {
+    setDateViewed((cur) => changeMonth(cur)(val));
+  };
+  const INIT_HEIGHT = 300;
+  const END_POSITION_Y = INIT_HEIGHT - 50;
+  const END_POSITION_X = Dimensions.get("window").width;
+  const isWeeklyView = useSharedValue(false);
+  const positionY = useSharedValue(0);
+  const positionX = useSharedValue(0);
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      if (isWeeklyView.value) {
+        positionY.value =
+          END_POSITION_Y - e.translationY > INIT_HEIGHT
+            ? INIT_HEIGHT
+            : END_POSITION_Y - e.translationY;
+      } else {
+        positionY.value = -e.translationY;
+      }
+
+      positionX.value = e.translationX;
+    })
+    .onTouchesUp((e) => {
+      if (positionY.value > END_POSITION_Y / 2) {
+        positionY.value = withTiming(END_POSITION_Y, { duration: 100 });
+        isWeeklyView.value = true;
+      } else {
+        positionY.value = withTiming(0, { duration: 100 });
+        isWeeklyView.value = false;
+      }
+      if (Math.abs(positionX.value) > END_POSITION_X / 2) {
+        positionX.value = withTiming(
+          Math.sign(positionX.value) * END_POSITION_X,
+          { duration: 500 },
+          () => {
+            runOnJS(changeMonthOnJS)(Math.sign(positionX.value) * -1);
+          }
+        );
+      } else {
+        positionX.value = withTiming(0, { duration: 500 });
+      }
+    });
+  const animatedStyle = useAnimatedStyle(() => ({
+    height: INIT_HEIGHT - positionY.value,
+    transform: [{ translateX: positionX.value }],
+  }));
+
   const handlePressLeft = () => {
     setDateViewed((cur) => changeMonth(cur)(-1));
   };
   const handlePressRight = () => {
     setDateViewed((cur) => changeMonth(cur)(+1));
   };
-  const handlePressDate = (date) => () => {
-    setDateSelected(date);
-  };
+  useEffect(() => {
+    positionX.value = 0;
+  }, [dateViewed]);
   return (
     <>
       <View style={styles.header}>
@@ -62,46 +160,61 @@ const CalendarComponent = () => {
           <Text style={styles.sat}>{saturday[0]}</Text>
         </View>
       </View>
-      <View style={{ height: 400 }}>
-        <FlatList
-          keyExtractor={(item) => item.getTime()}
-          data={getDaysRange(fistDate, lastDate)}
-          style={styles.body}
-          ItemSeparatorComponent={() => (
-            <View style={{ height: 10, width: 10 }} />
-          )}
-          columnWrapperStyle={{
-            justifyContent: "space-between",
-          }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.date}
-              onPress={handlePressDate(item)}
+      <GestureDetector gesture={panGesture}>
+        <View style={{ flex: 1 }}>
+          <Animated.View
+            style={[
+              {
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "row",
+                width: Dimensions.get("window").width * 3,
+              },
+              animatedStyle,
+            ]}
+          >
+            <View
+              style={{
+                width: Dimensions.get("window").width,
+                height: 300,
+                backgroundColor: "#555555",
+              }}
             >
-              <View
-                style={
-                  dateSelected
-                    ? isSameDate(item, dateSelected)
-                      ? styles.selected
-                      : styles.null
-                    : styles.null
-                }
-              >
-                <Text
-                  style={
-                    isSameMonth(item, dateViewed)
-                      ? styles.dateInMonth
-                      : styles.dateOutMonth
-                  }
-                >
-                  {item.getDate()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          numColumns={7}
-        />
-      </View>
+              <CalendarBody
+                dateSelected={dateSelected}
+                setDateSelected={setDateSelected}
+                dateViewed={dateViewedChangeMonth(-1)}
+              />
+            </View>
+            <View
+              style={{
+                width: Dimensions.get("window").width,
+                height: 300,
+                backgroundColor: "#777777",
+              }}
+            >
+              <CalendarBody
+                dateSelected={dateSelected}
+                setDateSelected={setDateSelected}
+                dateViewed={dateViewed}
+              />
+            </View>
+            <View
+              style={{
+                width: Dimensions.get("window").width,
+                height: 300,
+                backgroundColor: "#111111",
+              }}
+            >
+              <CalendarBody
+                dateSelected={dateSelected}
+                setDateSelected={setDateSelected}
+                dateViewed={dateViewedChangeMonth(1)}
+              />
+            </View>
+          </Animated.View>
+        </View>
+      </GestureDetector>
     </>
   );
 };
@@ -163,7 +276,8 @@ const styles = StyleSheet.create({
     width: Dimensions.get("window").width,
     height: 300,
     paddingHorizontal: 10,
-    paddingTop: 20,
+    paddingTop: 5,
+    backgroundColor: "#eeeeee",
   },
   arrow: {
     width: 30,
