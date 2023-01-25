@@ -7,6 +7,7 @@ import MyPage from "../screens/MyPage";
 import { CALENDAR, HOME, LIBRARY, MY_PAGE, TAB_TINT_COLOR } from "../libs";
 import { Ionicons } from "@expo/vector-icons";
 
+
 const Tab = createBottomTabNavigator();
 
 const Tabs = () => (
